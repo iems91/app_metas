@@ -1,0 +1,6 @@
+oracledb
+dash
+plotly
+pytz
+pandas
+dash_bootstrap_components
