@@ -76,11 +76,11 @@ app.layout = html.Div([
                                 dcc.Graph(id='graph3', className='dbc', config=config_graph)
                             ], sm=12, md=4)
                         ], className='g-2 my-auto', style={'margin-top': '7px'}),
-                        # dbc.Row([
-                        #     dbc.Col([
-                        #         dcc.Graph(id='graph4', className='dbc', config=config_graph)
-                        #     ], sm=12, md=12)
-                        # ], className='g-2 my-auto', style={'margin-top': '7px'})
+                        dbc.Row([
+                            dbc.Col([
+                                dcc.Graph(id='graph4', className='dbc', config=config_graph)
+                            ], sm=12, md=12)
+                        ], className='g-2 my-auto', style={'margin-top': '7px'})
                     ])
                 , style=tab_card)
             ], sm=12, lg=12),
@@ -371,67 +371,67 @@ def graph3(dataset_venda_liq, data_atual):
 
     return fig3
 
-# @app.callback(
-#     Output('graph4', 'figure'),
-#     Input('dataset_venda_liq', 'data'),
-#     Input('data_atual', 'data')
-# )
-# def graph4(dataset_venda_liq, data_atual):
-#     if not dataset_venda_liq:
-#         raise PreventUpdate
+@app.callback(
+    Output('graph4', 'figure'),
+    Input('dataset_venda_liq', 'data'),
+    Input('data_atual', 'data')
+)
+def graph4(dataset_venda_liq, data_atual):
+    if not dataset_venda_liq:
+        raise PreventUpdate
     
-#     data_atual = datetime.fromisoformat(data_atual).date()
-#     inicial = data_atual.replace(day=1)
-#     proximo_mes = (inicial + timedelta(days=31)).replace(day=1)   
-#     final = proximo_mes - timedelta(days=1)
-#     ontem = data_atual - timedelta(days=1)
+    data_atual = datetime.fromisoformat(data_atual).date()
+    inicial = data_atual.replace(day=1)
+    proximo_mes = (inicial + timedelta(days=31)).replace(day=1)   
+    final = proximo_mes - timedelta(days=1)
+    ontem = data_atual - timedelta(days=1)
     
 
     
-#     # Gerar um intervalo de datas
-#     datas = pd.date_range(start=inicial, end=ontem, freq='D')
-#     datas_exceto_hoje = pd.date_range(start=inicial, end=ontem, freq='B')
-#     sabados_exceto_hoje = datas[datas.weekday == 5]
+    # Gerar um intervalo de datas
+    datas = pd.date_range(start=inicial, end=ontem, freq='D')
+    datas_exceto_hoje = pd.date_range(start=inicial, end=ontem, freq='B')
+    sabados_exceto_hoje = datas[datas.weekday == 5]
 
-#     df4 = pd.DataFrame.from_dict(dataset_venda_liq).reset_index()
-#     df4['DATA'] = pd.to_datetime(df4['DATA'], errors='coerce')
-#     df_hoje = df4[df4['DATA'].dt.date == data_atual]
+    df4 = pd.DataFrame.from_dict(dataset_venda_liq).reset_index()
+    df4['DATA'] = pd.to_datetime(df4['DATA'], errors='coerce')
+    df_hoje = df4[df4['DATA'].dt.date == data_atual]
 
 
   
-#     if data_atual.weekday() == 5:
-#         df_sabado_exceto_hoje = df4[df4['DATA'].isin(sabados_exceto_hoje)]
-#         sabados_restantes = calcular_sabados(data_atual, final, feriados)
-#         total_vendas_sabados_exceto_hoje = df_sabado_exceto_hoje['VENDA_LIQ'].sum()
-#         meta_hoje = ( meta_mensal_sabados - total_vendas_sabados_exceto_hoje) / sabados_restantes
+    if data_atual.weekday() == 5:
+        df_sabado_exceto_hoje = df4[df4['DATA'].isin(sabados_exceto_hoje)]
+        sabados_restantes = calcular_sabados(data_atual, final, feriados)
+        total_vendas_sabados_exceto_hoje = df_sabado_exceto_hoje['VENDA_LIQ'].sum()
+        meta_hoje = ( meta_mensal_sabados - total_vendas_sabados_exceto_hoje) / sabados_restantes
               
-#     else:
-#         df_dias_uteis_exceto_hoje = df4[df4['DATA'].isin(datas_exceto_hoje)]
-#         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
-#         total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje['VENDA_LIQ'].sum()
-#         meta_hoje = (meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
+    else:
+        df_dias_uteis_exceto_hoje = df4[df4['DATA'].isin(datas_exceto_hoje)]
+        dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
+        total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje['VENDA_LIQ'].sum()
+        meta_hoje = (meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
  
     
-#     total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
-#     perc_atingido_hoje = (total_vendas_hoje/meta_hoje)*100
-    
-#     # Criando o gráfico de barras horizontal
-#     fig4 = go.Figure(go.Bar(
-#         x=percentual_atingido,  # Percentual de atingimento
-#         y=vendedores,  # Nomes dos vendedores
-#         orientation='h',  # Orientação horizontal
-#         text=[f'{p}%' for p in percentual_atingido],  # Exibir o percentual nas barras
-#         textposition='auto'  # Posição do texto
-#     ))
+    total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
+    perc_atingido_hoje = (total_vendas_hoje/meta_hoje)*100
+    vendedores = ['vendas01','vendas02']
+    # Criando o gráfico de barras horizontal
+    fig4 = go.Figure(go.Bar(
+        x=perc_atingido_hoje,  # Percentual de atingimento
+        y=vendedores,  # Nomes dos vendedores
+        orientation='h',  # Orientação horizontal
+        text=[f'{p}%' for p in perc_atingido_hoje],  # Exibir o percentual nas barras
+        textposition='auto'  # Posição do texto
+    ))
 
-#     # Adicionando título e labels
-#     fig4.update_layout(
-#         title='Percentual de Atingimento de Meta por Vendedor',
-#         xaxis_title='Percentual de Atingimento (%)',
-#         yaxis_title='Vendedores',
-#         xaxis=dict(range=[0, 100]),  # Definindo o intervalo do eixo x de 0 a 100%
-#     )
-#     fig4.show()
+    # Adicionando título e labels
+    fig4.update_layout(
+        title='Percentual de Atingimento de Meta por Vendedor',
+        xaxis_title='Percentual de Atingimento (%)',
+        yaxis_title='Vendedores',
+        xaxis=dict(range=[0, 100]),  # Definindo o intervalo do eixo x de 0 a 100%
+    )
+    fig4.show()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8350, debug=True)
