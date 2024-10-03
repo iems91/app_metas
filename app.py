@@ -397,6 +397,7 @@ def graph4(dataset_venda_liq, data_atual):
     df4['DATA'] = pd.to_datetime(df4['DATA'], errors='coerce')
     df_hoje = df4[df4['DATA'].dt.date == data_atual]
 
+    df_metas = pd.read_csv(csv_url)
 
   
     if data_atual.weekday() == 5:
@@ -408,8 +409,9 @@ def graph4(dataset_venda_liq, data_atual):
     else:
         df_dias_uteis_exceto_hoje = df4[df4['DATA'].isin(datas_exceto_hoje)]
         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
-        total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje['VENDA_LIQ'].sum()
-        meta_hoje = (meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
+        total_vendas_dias_uteis_exceto_hoje = df_dias_uteis_exceto_hoje.groupby('CODUSUR', as_index=False)['VENDA_LIQ'].sum()
+
+        meta_hoje = (meta_mensal_dias_uteis - total_vendas_dias_uteis_exceto_hoje) / dias_uteis_restantes
  
     
     total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
