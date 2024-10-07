@@ -397,7 +397,8 @@ def graph4(dataset_venda_liq, data_atual):
     df4['DATA'] = pd.to_datetime(df4['DATA'], errors='coerce')
     df_hoje = df4[df4['DATA'].dt.date == data_atual]
 
-    df_metas = pd.read_csv(csv_url)
+    df_metas_usuario = pd.read_csv(csv_url_codusur)
+    df_metas_geral = pd.read_csv(csv_url_geral)
 
   
     if data_atual.weekday() == 5:
