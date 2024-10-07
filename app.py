@@ -321,10 +321,7 @@ def graph3(dataset_venda_liq, data_atual):
     df3['DATA'] = pd.to_datetime(df3['DATA'], errors='coerce')
     df_hoje = df3[df3['DATA'].dt.date == data_atual]
 
-
-
-
-  
+ 
     if data_atual.weekday() == 5:
         df_sabado_exceto_hoje = df3[df3['DATA'].isin(sabados_exceto_hoje)]
         sabados_restantes = calcular_sabados(data_atual, final, feriados)
