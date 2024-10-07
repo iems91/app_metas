@@ -48,6 +48,7 @@ def processar_dados(query):
     # Retornar o DataFrame
     return df
 
+
 def venda_liquida ():
     df_vendas = processar_dados(query_vendas)
     df_devolucao = processar_dados(query_devol)
