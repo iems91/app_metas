@@ -1,10 +1,6 @@
-meta_anual_empresa = 10800000
 
-meta_mensal_dias_uteis = 1184400
 
-meta_mensal_sabados = 15600
 
-meta_mensal_empresa = meta_mensal_sabados + meta_mensal_dias_uteis
 
 
 # meta_mensal_v2 = 102000

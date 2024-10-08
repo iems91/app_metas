@@ -13,7 +13,7 @@ from metas import *
 from function import *
 from config import *
 
-lista_rca = [2,3,4,5,8,10,12,13]
+rca_nao_controla = [1,6,7,11,9998,9999]
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
@@ -37,7 +37,12 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 app.layout = html.Div([
     dbc.Container([
         dcc.Store(id='dataset_venda_liq', data={}),
+        dcc.Store(id='dataset_metas_codusur', data={}),
         dcc.Store(id='data_atual', data={}),
+        dcc.Store(id='meta_ano', data={}),
+        dcc.Store(id='meta_mes', data={}),
+        dcc.Store(id='meta_semana', data={}),
+        dcc.Store(id='meta_sabado', data={}),
         dcc.Interval(
             id='interval-component',
             interval=10*1000,
@@ -92,7 +97,12 @@ app.layout = html.Div([
 
 @app.callback(
     Output('dataset_venda_liq', 'data'),
+    Output('dataset_metas_codusur', 'data'),
     Output('data_atual', 'data'),
+    Output('meta_ano', 'data'),
+    Output('meta_mes', 'data'),
+    Output('meta_semana', 'data'),
+    Output('meta_sabado', 'data'),
     Input('interval-component', 'n_intervals')    
 )
 
@@ -102,18 +112,30 @@ def update_data(n_intervals):
     
     # Processa os dados completos
     df_venda_liq_geral = venda_liquida()
-   
-    
+       
     df_venda_liq_geral_store = df_venda_liq_geral.to_dict('records')
     
-    return df_venda_liq_geral_store, data_atual
+    df_metas_geral = pd.read_csv(csv_url_geral)
+    primeira_linha = df_metas_geral.iloc[0]
+    meta_ano = primeira_linha['META_ANO']
+    meta_mes = primeira_linha['META_MES']
+    meta_semana = primeira_linha['META_SEMANA']
+    meta_sabado = primeira_linha['META_SABADO']
+
+    df_metas_usuario = pd.read_csv(csv_url_codusur)
+
+    df_metas_usuario = df_metas_usuario[~df_metas_usuario['CODUSUR'].isin(rca_nao_controla)]
+    df_metas_usuario_store = df_metas_usuario.to_dict('records')
+    
+    return df_venda_liq_geral_store, df_metas_usuario_store, data_atual, meta_ano, meta_mes, meta_semana, meta_sabado
 
 @app.callback(
     Output('graph1', 'figure'),
     Input('dataset_venda_liq', 'data'),
-    Input('data_atual', 'data')
+    Input('data_atual', 'data'),
+    Input('meta_ano','data')
 )
-def graph1(dataset_venda_liq, data_atual):
+def graph1(dataset_venda_liq, data_atual, meta_ano):
     if not dataset_venda_liq:
         raise PreventUpdate
    
@@ -153,8 +175,8 @@ def graph1(dataset_venda_liq, data_atual):
     
     total_vendas = total_vendas_semana + total_vendas_sabados
     
-    perc_atingido = (total_vendas/meta_anual_empresa)*100
-    projecao_total_percent = (projecao_total/meta_anual_empresa)*100
+    perc_atingido = (total_vendas/meta_ano)*100
+    projecao_total_percent = (projecao_total/meta_ano)*100
     
     
     
@@ -203,9 +225,10 @@ def graph1(dataset_venda_liq, data_atual):
 @app.callback(
     Output('graph2', 'figure'),
     Input('dataset_venda_liq', 'data'),
-    Input('data_atual', 'data')
+    Input('data_atual', 'data'),
+    Input('meta_mes', 'data')
 )
-def graph2(dataset_venda_liq, data_atual):
+def graph2(dataset_venda_liq, data_atual, meta_mes):
     if not dataset_venda_liq:
         raise PreventUpdate
    
@@ -251,8 +274,8 @@ def graph2(dataset_venda_liq, data_atual):
     projecao_total = projecao_semana+projecao_sabado
     total_vendas = total_vendas_semana + total_vendas_sabados
     
-    perc_atingido = (total_vendas/meta_mensal_empresa)*100
-    projecao_total_percent = (projecao_total/meta_mensal_empresa)*100
+    perc_atingido = (total_vendas/meta_mes)*100
+    projecao_total_percent = (projecao_total/meta_mes)*100
     
     fig2 = go.Figure(go.Indicator(
         mode="gauge+number",
@@ -300,9 +323,11 @@ def graph2(dataset_venda_liq, data_atual):
 @app.callback(
     Output('graph3', 'figure'),
     Input('dataset_venda_liq', 'data'),
-    Input('data_atual', 'data')
+    Input('data_atual', 'data'),
+    Input('meta_semana', 'data'),
+    Input('meta_sabado', 'data')
 )
-def graph3(dataset_venda_liq, data_atual):
+def graph3(dataset_venda_liq, data_atual, meta_semana, meta_sabado):
     if not dataset_venda_liq:
         raise PreventUpdate
     
@@ -328,14 +353,14 @@ def graph3(dataset_venda_liq, data_atual):
         df_sabado_exceto_hoje = df3[df3['DATA'].isin(sabados_exceto_hoje)]
         sabados_restantes = calcular_sabados(data_atual, final, feriados)
         total_vendas_sabados_exceto_hoje = df_sabado_exceto_hoje['VENDA_LIQ'].sum()
-        meta_hoje = ( meta_mensal_sabados - total_vendas_sabados_exceto_hoje) / sabados_restantes
+        meta_hoje = (meta_sabado - total_vendas_sabados_exceto_hoje) / sabados_restantes
               
     else:
-        df_dias_uteis_exceto_hoje = df3[df3['CODUSUR'].isin(lista_rca)]
+        df_dias_uteis_exceto_hoje = df3[~df3['CODUSUR'].isin(rca_nao_controla)]
         df_dias_uteis_exceto_hoje = df3[df3['DATA'].isin(datas_exceto_hoje)]
         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
         total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje['VENDA_LIQ'].sum()
-        meta_hoje = ( meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
+        meta_hoje = (meta_semana - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
     
     total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
     perc_atingido_hoje = (total_vendas_hoje/meta_hoje)*100
@@ -373,11 +398,15 @@ def graph3(dataset_venda_liq, data_atual):
 @app.callback(
     Output('graph4', 'figure'),
     Input('dataset_venda_liq', 'data'),
+    Input('dataset_metas_codusur', 'data'),
     Input('data_atual', 'data')
 )
-def graph4(dataset_venda_liq, data_atual):
+def graph4(dataset_venda_liq, dataset_metas_codusur, data_atual):
     if not dataset_venda_liq:
         raise PreventUpdate
+    
+    df_metas_usuario = pd.DataFrame.from_dict(dataset_metas_codusur).reset_index()
+
     
     data_atual = datetime.fromisoformat(data_atual).date()
     inicial = data_atual.replace(day=1)
@@ -395,10 +424,7 @@ def graph4(dataset_venda_liq, data_atual):
     df4['DATA'] = pd.to_datetime(df4['DATA'], errors='coerce')
     df_hoje = df4[df4['DATA'].dt.date == data_atual]
 
-    df_metas_usuario = pd.read_csv(csv_url_codusur)
-    #df_metas_geral = pd.read_csv(csv_url_geral)
-    df_metas_usuario = df_metas_usuario[df_metas_usuario['CODUSUR'].isin(lista_rca)]
-    
+
     
     if data_atual.weekday() == 5:  # Se for sábado
         # Filtra as vendas dos sábados anteriores (exceto o sábado atual)
@@ -411,7 +437,7 @@ def graph4(dataset_venda_liq, data_atual):
         df_total_vendas_sabados_exceto_hoje = df_sabado_exceto_hoje.groupby('CODUSUR', as_index=False)['VENDA_LIQ'].sum()
         
         # Filtra apenas os resultados que estão em lista_rca
-        df_total_vendas_sabados_exceto_hoje = df_total_vendas_sabados_exceto_hoje[df_total_vendas_sabados_exceto_hoje['CODUSUR'].isin(lista_rca)]
+        df_total_vendas_sabados_exceto_hoje = df_total_vendas_sabados_exceto_hoje[~df_total_vendas_sabados_exceto_hoje['CODUSUR'].isin(rca_nao_controla)]
         
         # Mescla com o DataFrame de metas para calcular o META_HOJE para cada vendedor
         df_merged = pd.merge(df_metas_usuario, df_total_vendas_sabados_exceto_hoje, on='CODUSUR', suffixes=('_METAS', '_VENDAS'), how='left')
@@ -436,12 +462,12 @@ def graph4(dataset_venda_liq, data_atual):
         df_dias_uteis_exceto_hoje = df4[df4['DATA'].isin(datas_exceto_hoje)]
         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
         df_total_vendas_dias_uteis_exceto_hoje = df_dias_uteis_exceto_hoje.groupby('CODUSUR', as_index=False)['VENDA_LIQ'].sum()
-        df_total_vendas_dias_uteis_exceto_hoje = df_total_vendas_dias_uteis_exceto_hoje[df_total_vendas_dias_uteis_exceto_hoje['CODUSUR'].isin(lista_rca)]
+        df_total_vendas_dias_uteis_exceto_hoje = df_total_vendas_dias_uteis_exceto_hoje[~df_total_vendas_dias_uteis_exceto_hoje['CODUSUR'].isin(rca_nao_controla)]
 
         df_merged = pd.merge(df_metas_usuario, df_total_vendas_dias_uteis_exceto_hoje, on='CODUSUR', suffixes=('_METAS', '_VENDAS'))
         df_merged['META_HOJE'] = (df_merged['META_SEMANA']-df_merged['VENDA_LIQ'])/dias_uteis_restantes
         df_merged = pd.merge(df_merged, df_hoje, on='CODUSUR', suffixes=('_MERGE', '_HOJE'), how='left')
-        df_meta_hoje = df_merged.drop(['DATA', 'index'], axis=1)
+        df_meta_hoje = df_merged.drop(['DATA'], axis=1)
         df_meta_hoje['PERC_ATINGIDO'] = (df_meta_hoje['VENDA_LIQ_HOJE']/df_meta_hoje['META_HOJE'])*100
         df_meta_hoje = df_meta_hoje.dropna(subset=['CODUSUR', 'PERC_ATINGIDO'])
 
