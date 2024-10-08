@@ -413,8 +413,8 @@ def graph4(dataset_venda_liq, data_atual):
         df_merged = pd.merge(df_metas_usuario, df_total_vendas_dias_uteis_exceto_hoje, on='CODUSUR', suffixes=('_METAS', '_VENDAS'))
         df_merged['META_HOJE'] = (df_merged['META_SEMANA']-df_merged['VENDA_LIQ'])/dias_uteis_restantes
         df_merged = pd.merge(df_merged, df_hoje, on='CODUSUR', suffixes=('_MERGE', '_HOJE'), how='left')
-        df_merged.fillna(0, inplace=True)
         df_meta_hoje = df_merged.drop(['DATA', 'index'], axis=1)
+        df_merged.fillna(0, inplace=True)
         df_meta_hoje['PERC_ATINGIDO'] = (df_meta_hoje['VENDA_LIQ_HOJE']/df_meta_hoje['META_HOJE'])*100
 
     fig4 = go.Figure(go.Bar(
