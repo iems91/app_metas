@@ -45,7 +45,7 @@ app.layout = html.Div([
         dcc.Store(id='meta_sabado', data={}),
         dcc.Interval(
             id='interval-component',
-            interval=10*1000,
+            interval=3000*1000,
             n_intervals=0
         ),
         dbc.Row([
