@@ -13,6 +13,8 @@ from metas import *
 from function import *
 from config import *
 
+lista_rca = (2,3,4,5,8,10,12,13)
+
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
 
@@ -329,10 +331,11 @@ def graph3(dataset_venda_liq, data_atual):
         meta_hoje = ( meta_mensal_sabados - total_vendas_sabados_exceto_hoje) / sabados_restantes
               
     else:
+        df_dias_uteis_exceto_hoje = df3[df3['CODUSUR'].isin(lista_rca)]
         df_dias_uteis_exceto_hoje = df3[df3['DATA'].isin(datas_exceto_hoje)]
         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
-        total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje['VENDA_LIQ'].sum()
-        meta_hoje = (meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
+        total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje.groupby('CODUSUR')['VENDA_LIQ'].sum()
+        df_meta_hoje = pd.merge(meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
  
     
     total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
@@ -396,8 +399,9 @@ def graph4(dataset_venda_liq, data_atual):
 
     df_metas_usuario = pd.read_csv(csv_url_codusur)
     df_metas_geral = pd.read_csv(csv_url_geral)
-
-  
+    df_metas_usuario = df_metas_usuario[df_metas_usuario['CODUSUR'].isin(lista_rca)]
+    
+    
     if data_atual.weekday() == 5:
         df_sabado_exceto_hoje = df4[df4['DATA'].isin(sabados_exceto_hoje)]
         sabados_restantes = calcular_sabados(data_atual, final, feriados)
@@ -407,30 +411,36 @@ def graph4(dataset_venda_liq, data_atual):
     else:
         df_dias_uteis_exceto_hoje = df4[df4['DATA'].isin(datas_exceto_hoje)]
         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
-        total_vendas_dias_uteis_exceto_hoje = df_dias_uteis_exceto_hoje.groupby('CODUSUR', as_index=False)['VENDA_LIQ'].sum()
+        df_total_vendas_dias_uteis_exceto_hoje = df_dias_uteis_exceto_hoje.groupby('CODUSUR', as_index=False)['VENDA_LIQ'].sum()
 
-        meta_hoje = (meta_mensal_dias_uteis - total_vendas_dias_uteis_exceto_hoje) / dias_uteis_restantes
- 
-    
-    total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
-    perc_atingido_hoje = (total_vendas_hoje/meta_hoje)*100
-    vendedores = ['vendas01','vendas02']
-    # Criando o gráfico de barras horizontal
+        df_merged = pd.merge(df_metas_usuario, df_total_vendas_dias_uteis_exceto_hoje, on='CODUSUR', suffixes=('_METAS', '_VENDAS'))
+        df_merged['META_HOJE'] = (df_merged['META_SEMANA']-df_merged['VENDA_LIQ'])/dias_uteis_restantes
+        df_merged = pd.merge(df_merged, df_hoje, on='CODUSUR', suffixes=('_MERGE', '_HOJE'), how='left')
+        df_merged.fillna(0, inplace=True)
+        df_meta_hoje = df_merged.drop(['DATA', 'index'], axis=1)
+        df_meta_hoje['PERC_ATINGIDO'] = (df_meta_hoje['VENDA_LIQ_HOJE']/df_meta_hoje['META_HOJE'])*100
+
     fig4 = go.Figure(go.Bar(
-        x=perc_atingido_hoje,  # Percentual de atingimento
-        y=vendedores,  # Nomes dos vendedores
-        orientation='h',  # Orientação horizontal
-        text=[f'{p}%' for p in perc_atingido_hoje],  # Exibir o percentual nas barras
-        textposition='auto'  # Posição do texto
+        x=df_meta_hoje['PERC_ATINGIDO'],  # Valores no eixo x (Percentual de atingimento)
+        y=df_meta_hoje['CODUSUR'],        # Valores no eixo y (Nomes dos vendedores)
+        orientation='h',                  # Orientação horizontal
+        text=[f'{p}%' for p in df_meta_hoje['PERC_ATINGIDO']],  # Exibir o percentual nas barras
+        textposition='auto'               # Posição do texto
     ))
 
     # Adicionando título e labels
     fig4.update_layout(
+        main_config,
         title='Percentual de Atingimento de Meta por Vendedor',
         xaxis_title='Percentual de Atingimento (%)',
         yaxis_title='Vendedores',
         xaxis=dict(range=[0, 100]),  # Definindo o intervalo do eixo x de 0 a 100%
+        height=400,
+        template=template_theme,
+        margin=dict(t=50, b=10, l=40, r = 40)
     )
+
+    # Exibindo o gráfico
     fig4.show()
 
 if __name__ == "__main__":
