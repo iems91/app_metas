@@ -396,15 +396,41 @@ def graph4(dataset_venda_liq, data_atual):
     df_hoje = df4[df4['DATA'].dt.date == data_atual]
 
     df_metas_usuario = pd.read_csv(csv_url_codusur)
-    df_metas_geral = pd.read_csv(csv_url_geral)
+    #df_metas_geral = pd.read_csv(csv_url_geral)
     df_metas_usuario = df_metas_usuario[df_metas_usuario['CODUSUR'].isin(lista_rca)]
     
     
-    if data_atual.weekday() == 5:
+    if data_atual.weekday() == 5:  # Se for sábado
+        # Filtra as vendas dos sábados anteriores (exceto o sábado atual)
         df_sabado_exceto_hoje = df4[df4['DATA'].isin(sabados_exceto_hoje)]
+        
+        # Calcula os sábados restantes no mês a partir da data atual
         sabados_restantes = calcular_sabados(data_atual, final, feriados)
-        total_vendas_sabados_exceto_hoje = df_sabado_exceto_hoje['VENDA_LIQ'].sum()
-        meta_hoje = ( meta_mensal_sabados - total_vendas_sabados_exceto_hoje) / sabados_restantes
+        
+        # Calcula a venda líquida acumulada por CODUSUR nos sábados anteriores
+        df_total_vendas_sabados_exceto_hoje = df_sabado_exceto_hoje.groupby('CODUSUR', as_index=False)['VENDA_LIQ'].sum()
+        
+        # Filtra apenas os resultados que estão em lista_rca
+        df_total_vendas_sabados_exceto_hoje = df_total_vendas_sabados_exceto_hoje[df_total_vendas_sabados_exceto_hoje['CODUSUR'].isin(lista_rca)]
+        
+        # Mescla com o DataFrame de metas para calcular o META_HOJE para cada vendedor
+        df_merged = pd.merge(df_metas_usuario, df_total_vendas_sabados_exceto_hoje, on='CODUSUR', suffixes=('_METAS', '_VENDAS'), how='left')
+        
+        # Calcula a meta de hoje para cada vendedor com base nos sábados restantes
+        df_merged['META_HOJE'] = (df_merged['META_SABADO'] - df_merged['VENDA_LIQ']) / sabados_restantes
+        
+        # Mescla com o DataFrame `df_hoje` para incluir as vendas do dia atual
+        df_merged = pd.merge(df_merged, df_hoje, on='CODUSUR', suffixes=('_MERGE', '_HOJE'), how='left')
+        
+        # Remove colunas desnecessárias e calcula o percentual de atingimento
+        df_meta_hoje = df_merged.drop(['DATA', 'index'], axis=1)
+        df_meta_hoje = df_meta_hoje[df_meta_hoje['META_SABADO'] != 0]
+
+        
+        df_meta_hoje.fillna(0, inplace=True)  # Substituir valores nulos por 0
+        df_meta_hoje['META_HOJE']= (df_meta_hoje['META_SABADO']-df_meta_hoje['VENDA_LIQ_MERGE'])/sabados_restantes
+        df_meta_hoje['PERC_ATINGIDO'] = (df_meta_hoje['VENDA_LIQ_HOJE'] / df_meta_hoje['META_HOJE']) * 100
+
               
     else:
         df_dias_uteis_exceto_hoje = df4[df4['DATA'].isin(datas_exceto_hoje)]
@@ -416,7 +442,6 @@ def graph4(dataset_venda_liq, data_atual):
         df_merged['META_HOJE'] = (df_merged['META_SEMANA']-df_merged['VENDA_LIQ'])/dias_uteis_restantes
         df_merged = pd.merge(df_merged, df_hoje, on='CODUSUR', suffixes=('_MERGE', '_HOJE'), how='left')
         df_meta_hoje = df_merged.drop(['DATA', 'index'], axis=1)
-        #df_merged.fillna(0, inplace=True)
         df_meta_hoje['PERC_ATINGIDO'] = (df_meta_hoje['VENDA_LIQ_HOJE']/df_meta_hoje['META_HOJE'])*100
         df_meta_hoje = df_meta_hoje.dropna(subset=['CODUSUR', 'PERC_ATINGIDO'])
 
@@ -426,7 +451,7 @@ def graph4(dataset_venda_liq, data_atual):
         orientation='h',                  # Orientação horizontal
         text=[f'{p:.2f}%' for p in df_meta_hoje['PERC_ATINGIDO']],  # Exibir o percentual com 2 casas decimais
         textposition='auto', # Posição do texto
-        width=0.9  
+        width=0.8  
     ))
 
     # Adicionando título e labels
