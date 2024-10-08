@@ -335,8 +335,6 @@ def graph3(dataset_venda_liq, data_atual):
         df_dias_uteis_exceto_hoje = df3[df3['DATA'].isin(datas_exceto_hoje)]
         dias_uteis_restantes = calcular_dias_uteis(data_atual, final, feriados)
         total_vendas_dias_uteis_ate_ontem = df_dias_uteis_exceto_hoje.groupby('CODUSUR')['VENDA_LIQ'].sum()
-        df_meta_hoje = pd.merge(meta_mensal_dias_uteis - total_vendas_dias_uteis_ate_ontem) / dias_uteis_restantes
- 
     
     total_vendas_hoje = df_hoje['VENDA_LIQ'].sum()
     perc_atingido_hoje = (total_vendas_hoje/meta_hoje)*100
@@ -386,7 +384,6 @@ def graph4(dataset_venda_liq, data_atual):
     final = proximo_mes - timedelta(days=1)
     ontem = data_atual - timedelta(days=1)
     
-
     
     # Gerar um intervalo de datas
     datas = pd.date_range(start=inicial, end=ontem, freq='D')
@@ -441,7 +438,7 @@ def graph4(dataset_venda_liq, data_atual):
     )
 
     # Exibindo o gráfico
-    fig4.show()
+    return fig4
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8350, debug=True)
