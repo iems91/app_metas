@@ -8,6 +8,8 @@ import plotly.graph_objects as go
 import pytz
 from datetime import datetime, timedelta
 from dash.exceptions import PreventUpdate
+from flask_caching import Cache
+from flask_compress import Compress 
 from feriados import *
 from metas import *
 from function import *
@@ -16,7 +18,13 @@ from config import *
 rca_nao_controla = [1,6,7,11,9998,9999]
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+Compress(app.server)  # Ativa a compressão gzip para otimizar transferência de dados
 
+# Configuração do cache
+cache = Cache(app.server, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 300
+})
 
 
 # df_vendas = processar_dados(query_vendas)
@@ -32,8 +40,6 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 # opcoes_anos.insert(0, {'label': 'Todos', 'value': 'Todos'})
 # opcoes_meses.insert(0, {'label': 'Todos', 'value': 'Todos'})
 
-
-
 app.layout = html.Div([
     dbc.Container([
         dcc.Store(id='dataset_venda_liq', data={}),
@@ -43,11 +49,8 @@ app.layout = html.Div([
         dcc.Store(id='meta_mes', data={}),
         dcc.Store(id='meta_semana', data={}),
         dcc.Store(id='meta_sabado', data={}),
-        dcc.Interval(
-            id='interval-component',
-            interval=3000*1000,
-            n_intervals=0
-        ),
+        dcc.Interval(id='interval-dynamic', interval=30*1000, n_intervals=0),
+        dcc.Interval(id='interval-static', interval=43200*1000, n_intervals=0),
         dbc.Row([
             dbc.Col([
                 dbc.Card(
@@ -96,25 +99,19 @@ app.layout = html.Div([
 ])
 
 @app.callback(
-    Output('dataset_venda_liq', 'data'),
     Output('dataset_metas_codusur', 'data'),
     Output('data_atual', 'data'),
     Output('meta_ano', 'data'),
     Output('meta_mes', 'data'),
     Output('meta_semana', 'data'),
     Output('meta_sabado', 'data'),
-    Input('interval-component', 'n_intervals')    
+    Input('interval-static', 'n_intervals')    
 )
-
+@cache.memoize()
 def update_data(n_intervals):
     tz = pytz.timezone('America/Sao_Paulo')
     data_atual = datetime.now(tz).date()
-    
-    # Processa os dados completos
-    df_venda_liq_geral = venda_liquida()
        
-    df_venda_liq_geral_store = df_venda_liq_geral.to_dict('records')
-    
     df_metas_geral = pd.read_csv(csv_url_geral)
     primeira_linha = df_metas_geral.iloc[0]
     meta_ano = primeira_linha['META_ANO']
@@ -127,8 +124,16 @@ def update_data(n_intervals):
     df_metas_usuario = df_metas_usuario[~df_metas_usuario['CODUSUR'].isin(rca_nao_controla)]
     df_metas_usuario_store = df_metas_usuario.to_dict('records')
     
-    return df_venda_liq_geral_store, df_metas_usuario_store, data_atual, meta_ano, meta_mes, meta_semana, meta_sabado
-
+    return  df_metas_usuario_store, data_atual, meta_ano, meta_mes, meta_semana, meta_sabado
+@app.callback(
+    Output('dataset_venda_liq', 'data'),
+    Input('interval-dynamic', 'n_intervals')
+)
+@cache.memoize()
+def update_dynamic_data(n_intervals):
+    df_venda_liq_geral = venda_liquida()
+    df_venda_liq_geral_store = df_venda_liq_geral.to_dict('records')
+    return df_venda_liq_geral_store
 @app.callback(
     Output('graph1', 'figure'),
     Input('dataset_venda_liq', 'data'),
