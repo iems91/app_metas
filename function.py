@@ -56,12 +56,12 @@ def venda_liquida ():
   
     # Realizar o merge mantendo todas as linhas de df_vendas
     df_venda_liq = df_vendas.merge(
-        df_devolucao[['DATA', 'CODUSUR', 'VALOR']],
+        df_devolucao[['DATA', 'CODUSUR', 'VALOR', 'CUSTO']],
         on=['DATA', 'CODUSUR'],
         how='left',
         suffixes=('', '_DEVOL_MERGED')
     ).merge(
-        df_devolucao_avulsa[['DATA', 'CODUSUR', 'VALOR']],
+        df_devolucao_avulsa[['DATA', 'CODUSUR', 'VALOR','CUSTO']],
         on=['DATA', 'CODUSUR'],
         how='left',
         suffixes=('', '_DEVOL_AVUL_MERGED')
@@ -71,15 +71,20 @@ def venda_liquida ():
     df_venda_liq.fillna({
         'VALOR':0,
         'VALOR_DEVOL_MERGED': 0,
-        'VALOR_DEVOL_AVUL_MERGED': 0
+        'VALOR_DEVOL_AVUL_MERGED': 0,
+        'CUSTO':0,
+        'CUSTO_DEVOL_MERGED':0,
+        'CUSTO_DEVOL_AVUL_MERGED':0
     }, inplace=True)
  
 
  
     df_venda_liq['VENDA_LIQ'] = df_venda_liq['VALOR'] - df_venda_liq['VALOR_DEVOL_MERGED'] - df_venda_liq['VALOR_DEVOL_AVUL_MERGED']
+    df_venda_liq['CUSTO_LIQ'] = df_venda_liq['CUSTO'] - df_venda_liq['CUSTO_DEVOL_MERGED'] - df_venda_liq['CUSTO_DEVOL_AVUL_MERGED']
+
 
         # Remover colunas desnecessárias
-    df_venda_liq.drop(columns=['VALOR', 'VALOR_DEVOL_MERGED', 'VALOR_DEVOL_AVUL_MERGED'], inplace=True)
+    df_venda_liq.drop(columns=['VALOR', 'VALOR_DEVOL_MERGED', 'VALOR_DEVOL_AVUL_MERGED', 'CUSTO', 'CUSTO_DEVOL_MERGED', 'CUSTO_DEVOL_AVUL_MERGED'], inplace=True)
 
 
     # Retornar DataFrame processado
