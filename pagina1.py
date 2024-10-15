@@ -15,6 +15,7 @@ from feriados import *
 from metas import *
 from function import *
 from config import *
+import os
 
 # Definir usuário e senha válidos
 VALID_USERNAME_PASSWORD_PAIRS = {
@@ -25,6 +26,15 @@ rca_nao_controla = [1,6,7,11,9998,9999]
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 Compress(app.server)  # Ativa a compressão gzip para otimizar transferência de dados
+
+app.server.secret_key = os.urandom(24)
+
+Compress(app.server)
+
+cache = Cache(app.server, config={
+    'CACHE_TYPE': 'SimpleCache',  # Pode ser RedisCache, MemcachedCache, etc.
+    'CACHE_DEFAULT_TIMEOUT': 300
+})
 
 auth = dash_auth.BasicAuth(
     app,
